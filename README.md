@@ -49,6 +49,16 @@ uv run jupyter notebook notebooks/report.ipynb
 | **INT8 (Legacy)** | **3.82 MB** | 46.58 ms | **ONNX Route 성공 (72% 압축)** |
 | **INT8 (ai-edge)** | **3.83 MB** | 49.86 ms | **SavedModel Intercept 성공** |
 
+### 안드로이드 기기 결과 (Android ADB Benchmark)
+| 모델 (Model) | CPU Latency | GPU Latency | NPU Latency |
+| :--- | :--- | :--- | :--- |
+| **FP32** | 68.52 ms | **15.88 ms** | 68.86 ms |
+| **INT8 (ai-edge Hybrid)** | **39.95 ms** | 17.57 ms | **39.86 ms** |
+| **INT8 (Legacy ONNX)** | **39.62 ms** | 17.53 ms | **39.70 ms** |
+
+> [!TIP]
+> **모바일 CPU**에서는 INT8 양자화만으로도 FP32 대비 **약 1.7배 성능 향상**을 얻을 수 있습니다.
+
 ### 💡 결과 분석 (Key Findings)
 
 
