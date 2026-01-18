@@ -1,110 +1,101 @@
-# LiteRT On-Device Image Classification Project
+# LiteRT (TFLite) 온디바이스 AI 최적화 프로젝트
 
-본 프로젝트는 PyTorch MobileNetV2 모델을 구글의 **LiteRT (구 TensorFlow Lite)** 런타임에서 실행하기 위한 온디바이스 AI 파이프라인 구축 예제입니다.
+본 프로젝트는 PyTorch로 학습된 **MobileNetV2** 이미지 분류 모델을 **모바일 기기(Android)**에서 빠르고 가볍게 실행하기 위해 **LiteRT (구 TensorFlow Lite)**로 변환 및 최적화하는 과정을 다룹니다.
 
-FP32 모델 변환부터 INT8 양자화(Dynamic Quantization), 추론, 그리고 성능 벤치마크까지의 [End-to-End] 과정을 다룹니다.
+## � 핵심 성과 (Executive Summary)
 
-## 📁 프로젝트 구조
+| 최적화 지표 | 결과 | 비고 |
+| :--- | :--- | :--- |
+| **모델 크기 감축** | 13.4MB → **3.8MB** | **약 72% 용량 절감** (Full Integer Quantization) |
+| **모바일 추론 속도** | 68ms → **39ms** | **약 1.7배 가속** (Android ARM64 CPU 기준) |
+| **변환 전략** | **ai-edge Hybrid** | 구글 최신 툴체인(`ai-edge-torch`)과 안정성을 모두 확보한 하이브리드 전략 |
 
-```bash
-.
-├── notebooks/          # Jupyter Notebook 리포트
-│   └── report.ipynb    # [Main] 실행 및 결과 시각화
-├── src/                # 파이썬 패키지 소스
-│   ├── convert.py      # PyTorch -> LiteRT 변환
-│   ├── inference.py    # LiteRT 추론 엔진
-│   ├── benchmark.py    # 성능 측정 및 비교
-│   └── data_loader.py  # Calibration 데이터 로더
-├── models/             # 변환된 .tflite 모델 저장소
-└── README.md           # 프로젝트 문서
+---
+
+## �️ 변환 파이프라인 (Methodology)
+
+우리는 최적의 성능을 찾기 위해 총 3가지 경로를 탐색했으며, 최종적으로 **Strategy C (Hybrid)**를 채택했습니다.
+
+```mermaid
+graph TD
+    A[PyTorch Model<br>(MobileNetV2)] -->|ai-edge-torch| B(FP32 TFLite)
+    A -->|SavedModel Intercept| C{TensorFlow<br>SavedModel}
+    C -->|TFLiteConverter<br>Standard Quantizer| D[INT8 TFLite<br>(Hybrid Route)]
+    A -->|ONNX Export| E(ONNX Model)
+    E -->|onnx2tf| D2[INT8 TFLite<br>(Legacy Route)]
+    
+    style B fill:#f9f,stroke:#333
+    style D fill:#9f9,stroke:#333,stroke-width:2px
+    style D2 fill:#eee,stroke:#333
 ```
 
-## 🚀 시작하기 (Getting Started)
+### 1. FP32 (Baseline)
+- 가장 기본적인 변환. 정확도는 유지되지만 용량이 크고 모바일 가속 효율이 낮음.
 
-### 1. 환경 설정
-본 프로젝트는 **`uv`** 패키지 매니저를 사용합니다.
+### 2. INT8 (ai-edge Hybrid) - **(Recommended)**
+- **\"SavedModel Intercept\" 전략**: `ai-edge-torch`의 우수한 그래프 변환(Lowering) 기능만 사용해 TF SavedModel을 추출하고, 양자화는 검증된 표준 TFLiteConverter를 사용하는 방식입니다.
+- **장점:** 복잡한 ONNX 변환 없이도 안정적이고 강력한 성능의 INT8 모델을 생성합니다.
 
-```bash
-# 의존성 설치
-uv sync
-```
+### 3. INT8 (Legacy ONNX)
+- 전통적인 방식(PyTorch->ONNX->TF). 결과물 성능은 Hybrid와 동일하지만, 외부 라이브러리 의존성이 높고 과정이 복잡합니다.
 
-### 2. Jupyter Notebook 실행 (추천)
-모든 과정을 시각적으로 확인하고 리포트를 보려면 노트북을 실행하세요.
+---
 
-```bash
-# VS Code에서 notebooks/report.ipynb 열기
-# 또는 터미널에서:
-uv run jupyter notebook notebooks/report.ipynb
-```
+## 📊 벤치마크 결과 (Benchmark Results)
 
-## 📊 벤치마크 결과 요약 (Benchmark Results)
+### 1. 안드로이드 기기 (ADB Real Device)
+실제 **Android ARM64** 기기에서 측정한 결과입니다.
 
-본 프로젝트에서는 세 가지 변환 전략을 시도하였으며, 최종적으로 **ONNX를 경유한 Static INT8 양자화**가 가장 유의미한 모델 크기 감소를 달성했습니다.
-
-| 모델 (Model) | 파일 크기 (Size) | 평균 지연 시간 (Latency on CPU) | 비고 (Note) |
-| :--- | :--- | :--- | :--- |
-| **FP32 (Base)** | 13.43 MB | **12.44 ms** | 기준 모델 |
-| **INT8 (Dynamic)** | 13.43 MB | 12.95 ms | `ai-edge-torch` 양자화 미적용됨 (FP32와 동일) |
-| **INT8 (Legacy)** | **3.82 MB** | 46.58 ms | **ONNX Route 성공 (72% 압축)** |
-| **INT8 (ai-edge)** | **3.83 MB** | 49.86 ms | **SavedModel Intercept 성공** |
-
-### 안드로이드 기기 결과 (Android ADB Benchmark)
 | 모델 (Model) | CPU Latency | GPU Latency | NPU Latency |
 | :--- | :--- | :--- | :--- |
 | **FP32** | 68.52 ms | **15.88 ms** | 68.86 ms |
 | **INT8 (ai-edge Hybrid)** | **39.95 ms** | 17.57 ms | **39.86 ms** |
-| **INT8 (Legacy ONNX)** | **39.62 ms** | 17.53 ms | **39.70 ms** |
 
-> [!TIP]
-> **모바일 CPU**에서는 INT8 양자화만으로도 FP32 대비 **약 1.7배 성능 향상**을 얻을 수 있습니다.
+> **Insight:** 모바일 CPU에서는 INT8 모델이 **약 1.7배** 더 빠릅니다. NPU 지원 기기라면 더 큰 격차를 기대할 수 있습니다.
 
-### 💡 결과 분석 (Key Findings)
-
-
-### 3. 방법론 비교: ONNX Route vs ai-edge Hybrid
-두 가지 성공적인 변환 방식의 기술적 차이점을 비교합니다.
-
-| 비교 항목 | **Legacy Route (ONNX)** | **Modern Hybrid Route (ai-edge)** |
+### 2. 로컬 PC (x86 CPU)
+| 모델 | 크기 | Latency |
 | :--- | :--- | :--- |
-| **변환 파이프라인** | PyTorch → **ONNX** → TF SavedModel → TFLite | PyTorch → **StableHLO** → TF SavedModel → TFLite |
-| **핵심 기술** | **ONNX** (오픈 표준) | **Google StableHLO** (공식 권장) |
-| **특징** | • 호환성 높지만 변환 단계가 복잡함<br>• 외부 라이브러리(`onnx`, `onnx2tf`) 필요 | • **Google 공식 파이프라인** (미래 지향적)<br>• 불필요한 제3 포맷 변환 없음<br>• 파이프라인이 더 간결함 |
-| **결론** | **Result 동일** | **유지보수 및 미래 호환성 우수** |
+| FP32 | 13.43 MB | ~5.5 ms |
+| INT8 | **3.83 MB** | ~6.9 ms |
 
-### 4. 결과 분석 (Key Findings)
-1.  **성공적인 경량화 (Compression Success):**
-    *   **ONNX Route:** PyTorch -> ONNX -> TF -> TFLite 방식을 통해 **3.82MB** 달성.
-    *   **ai-edge Hybrid Route:** PyTorch -> ai-edge (SavedModel) -> TFLite 방식을 통해 **3.83MB** 달성.
-    *   두 방식 모두 FP32 대비 **약 72%의 용량 절감**효과를 보였습니다.
-    *   이는 모바일 앱 배포 시 용량 절감에 큰 이점을 제공합니다.
+> **Insight:** PC CPU(AVX)는 FP32 연산에 극도로 최적화되어 있어, INT8 변환 시 속도 이득보다는 **크기 이득(72% 감소)**에 주목해야 합니다.
 
-2.  **CPU에서의 속도 저하 (Latency Trade-off on x86 CPU):**
-    *   현재 테스트 환경(x86 CPU)에서는 INT8 모델이 FP32 모델보다 약 3.7배 느린 것으로 측정되었습니다.
-    *   **원인:** 일반적인 PC/서버 CPU는 부동소수점(Float32) 연산에 최적화되어 있으며(AVX 등), INT8 연산 시 데이터 변환 오버헤드가 발생할 수 있습니다.
-    *   **모바일 배포 시 예상:** Android/iOS 디바이스의 NPU(Neural Processing Unit)나 DSP는 INT8 연산에 특화되어 있어, 실제 모바일 환경에서는 INT8 모델이 훨씬 빠르고 전력 효율적일 것으로 예상됩니다.
+---
 
-## 🚀 결론 및 추천 (Conclusion)
-*   **추천 방식:** **`ai-edge` Hybrid 방식** (SavedModel Intercept)이 ONNX 방식보다 관리 포인트가 적고 Google의 최신 기술 스택을 따르므로 장기적으로 더 유리합니다.
-*   **모바일 배포:** **INT8 모델**을 사용하여 NPU 가속을 활용하세요.
-*   **일반 서버 배포:** **FP32 모델**이 현재 CPU 환경에서는 더 빠를 수 있습니다.
+## � 실행 방법 (Getting Started)
 
-## 📊 주요 기능 및 결과
+### 1. 환경 설정
+`uv` 패키지 매니저를 사용합니다.
 
-### 1. 모델 변환 (Model Conversion)
-`ai-edge-torch` 라이브러리를 사용하여 PyTorch 모델을 tflite 포맷으로 변환합니다.
-- **FP32**: 기본 변환
-- **INT8 (Dynamic)**: 동적 양자화 시도 (현재 환경 호환성 이슈로 FP32와 동일 크기 유지됨)
+```bash
+uv sync  # 의존성 설치
+```
 
-### 2. 성능 비교 (Benchmark Results)
-`notebooks/report.ipynb`에서 최신 결과를 확인할 수 있습니다.
+### 2. 변환 실행 (Conversion)
+새로운 Hybrid 방식으로 모델을 변환합니다.
 
-| Model | Size (MB) | Avg Latency (ms) | 비고 |
-| :--- | :--- | :--- | :--- |
-| **MobileNetV2 (FP32)** | 13.43 | ~13.37 | Base |
-| **MobileNetV2 (INT8)** | 13.43 | ~12.69 | Dynamic Quantization 시도했으나 효과 미미 |
+```bash
+# PyTorch -> SavedModel -> INT8 TFLite 변환
+uv run python src/convert_aiedge.py
+```
 
-## 🛠️ 트러블슈팅
-- **`ModuleNotFoundError: 'ai_edge_torch'`**: 추론 시에는 `ai-edge-torch`가 필요 없으므로 `inference.py` 등을 실행할 때 해당 모듈이 없어도 되도록 Lazy Import 처리가 되어 있습니다.
-- **`numpy` 버전**: `ai-edge-torch`는 numpy 2.x를, `tflite-runtime`은 numpy 1.x를 선호합니다. `uv` 환경에서는 이를 유연하게 관리합니다.
+### 3. 벤치마크 (Benchmark)
 
+**로컬 PC 측정:**
+```bash
+uv run python src/benchmark.py
+```
+
+**안드로이드 기기 측정 (ADB 필요):**
+안드로이드 기기를 USB로 연결하고 USB 디버깅을 켠 상태여야 합니다.
+```bash
+uv run python src/benchmark_adb.py
+```
+
+### 4. 리포트 보기
+상세한 과정과 분석은 Jupyter Notebook에 담겨 있습니다.
+
+```bash
+uv run jupyter notebook notebooks/report.ipynb
+```
