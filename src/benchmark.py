@@ -21,9 +21,15 @@ def benchmark_model(model_path, num_runs=50):
     input_details = interpreter.get_input_details()
     output_details = interpreter.get_output_details()
     input_shape = input_details[0]['shape']
+    input_dtype = input_details[0]['dtype']
     
-    # Generate random input
-    input_data = np.random.randn(*input_shape).astype(np.float32)
+    # Generate random input based on dtype
+    if input_dtype == np.uint8:
+        input_data = np.random.randint(0, 255, input_shape).astype(np.uint8)
+    elif input_dtype == np.int8:
+        input_data = np.random.randint(-128, 127, input_shape).astype(np.int8)
+    else:
+        input_data = np.random.randn(*input_shape).astype(np.float32)
     
     # Warmup
     for _ in range(5):
@@ -56,7 +62,13 @@ def benchmark_model(model_path, num_runs=50):
         "mem_peak_mb": (mem_after) / 1024 # maxrss is in KB on Linux
     }
 
-def run_comparison(models_dir="models"):
+def run_comparison(models_dir=None):
+    if models_dir is None:
+        # Resolve models dir relative to this script: src/benchmark.py -> ../models
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        models_dir = os.path.join(base_dir, "models")
+        
+    print(f"Searching for models in: {os.path.abspath(models_dir)}")
     model_files = glob.glob(os.path.join(models_dir, "*.tflite"))
     if not model_files:
         print("No .tflite models found in", models_dir)

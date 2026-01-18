@@ -8,3 +8,9 @@ wheels/
 
 # Virtual environments
 .venv
+
+# Large model artifacts (Intermediate)
+models/*.onnx
+models/*.onnx.data
+models/temp_saved_model/
+models/mobilenet_v2_saved_model/
