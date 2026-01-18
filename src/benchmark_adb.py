@@ -61,8 +61,12 @@ def run_adb_benchmark(model_name, use_gpu=False, use_npu=False):
     return None
 
 def main():
-    bin_path = "bin/benchmark_model_android_arm64"
-    models_dir = "models"
+    # Resolve paths relative to this script location to ensure it works from anywhere (e.g. notebooks)
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.dirname(script_dir)
+    
+    bin_path = os.path.join(project_root, "bin", "benchmark_model_android_arm64")
+    models_dir = os.path.join(project_root, "models")
     
     if not os.path.exists(bin_path):
         print(f"Error: {bin_path} not found. Please download it first.")

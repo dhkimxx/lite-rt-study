@@ -2,7 +2,7 @@
 
 본 프로젝트는 PyTorch로 학습된 **MobileNetV2** 이미지 분류 모델을 **모바일 기기(Android)**에서 빠르고 가볍게 실행하기 위해 **LiteRT (구 TensorFlow Lite)**로 변환 및 최적화하는 과정을 다룹니다.
 
-## � 핵심 성과 (Executive Summary)
+## 핵심 성과 (Executive Summary)
 
 | 최적화 지표 | 결과 | 비고 |
 | :--- | :--- | :--- |
@@ -12,7 +12,7 @@
 
 ---
 
-## �️ 변환 파이프라인 (Methodology)
+## 변환 파이프라인 (Methodology)
 
 우리는 최적의 성능을 찾기 위해 총 3가지 경로를 탐색했으며, 최종적으로 **Strategy C (Hybrid)**를 채택했습니다.
 
@@ -63,16 +63,27 @@ graph TD
 
 ---
 
-## � 실행 방법 (Getting Started)
+## 실행 방법 (Getting Started)
 
-### 1. 환경 설정
-`uv` 패키지 매니저를 사용합니다.
+### 1. 환경 설정 (Setup)
+`uv` 패키지 매니저를 사용하여 의존성을 설치하고 환경을 구성합니다.
 
 ```bash
-uv sync  # 의존성 설치
+uv sync
 ```
 
-### 2. 변환 실행 (Conversion)
+### 2. 주요 스크립트 설명 (Scripts Details)
+
+이 프로젝트는 `src` 디렉토리 내의 모듈화된 파이썬 스크립트들로 구성되어 있습니다.
+
+| 스크립트 파일 | 역할 및 동작 원리 | 실행 예시 |
+| :--- | :--- | :--- |
+| **`src/convert_aiedge.py`** | **(핵심)** PyTorch 모델을 다운로드하고, `ai-edge-torch`로 SavedModel을 추출한 뒤, TFLiteConverter로 INT8 양자화를 수행합니다. | `uv run python src/convert_aiedge.py` |
+| **`src/convert_onnx.py`** | (레거시) PyTorch 모델을 ONNX 포맷을 거쳐 TensorFlow 포맷으로 변환하고 양자화합니다. 비교 검증용입니다. | `uv run python src/convert_onnx.py` |
+| **`src/benchmark.py`** | **PC(x86)** 환경에서 3가지 모델(FP32, Hybrid INT8, Legacy INT8)의 크기와 Latency를 자동으로 측정하고 비교합니다. | `uv run python src/benchmark.py` |
+| **`src/benchmark_adb.py`** | PC와 연결된 **안드로이드 기기**에 모델과 벤치마크 툴을 전송하고, ADB Shell로 실행하여 **모바일 CPU/GPU/NPU** 성능을 측정합니다. | `uv run python src/benchmark_adb.py` |
+
+### 3. 변환 실행 (Conversion)
 새로운 Hybrid 방식으로 모델을 변환합니다.
 
 ```bash
@@ -80,7 +91,7 @@ uv sync  # 의존성 설치
 uv run python src/convert_aiedge.py
 ```
 
-### 3. 벤치마크 (Benchmark)
+### 4. 벤치마크 (Benchmark)
 
 **로컬 PC 측정:**
 ```bash
