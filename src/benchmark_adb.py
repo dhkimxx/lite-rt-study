@@ -6,9 +6,9 @@ import time
 
 # --- Configuration ---
 ADB_REMOTE_DIR = "/data/local/tmp/quant_study"
-LOCAL_MODEL_DIR = "."  # Models are in root/src run dir basically
-BENCHMARK_BIN = "./benchmark_model"  # Local path to downloaded binary
-RESULTS_CSV = "android_benchmark_results.csv"
+LOCAL_MODEL_DIR = "models"  # Models are in models/
+BENCHMARK_BIN = "bin/benchmark_model"  # Local path to downloaded binary
+RESULTS_CSV = "results/android_benchmark_results.csv"
 
 # Models to benchmark (filenames expected to exist locally)
 MODELS = {

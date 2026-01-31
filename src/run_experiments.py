@@ -13,8 +13,8 @@ import shutil
 import time
 
 # Configuration
-RESULTS_CSV = "experiment_results.csv"
-MODEL_FLOAT = "mobilenet_v2_float.tflite"
+RESULTS_CSV = "results/experiment_results.csv"
+MODEL_FLOAT = "models/mobilenet_v2_float.tflite"
 
 EXPERIMENTAL_CASES = [
     {"id": "C0", "name": "Baseline", "type": "fp32", "data": None, "samples": 0},
@@ -106,7 +106,7 @@ def run_experiments():
         cname = case["name"]
         print(f"\n>>> Running Experiment {cid}: {cname} <<<")
 
-        output_filename = f"mobilenet_v2_{cid.lower().replace('-', '_')}.tflite"
+        output_filename = f"models/mobilenet_v2_{cid.lower().replace('-', '_')}.tflite"
 
         qt = quantizer.Quantizer(MODEL_FLOAT)
 

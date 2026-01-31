@@ -115,4 +115,4 @@ uv run src/benchmark_adb.py
 ### 5.2 결과 리포트
 
 - [`notebooks/Quantization_Report.ipynb`](notebooks/Quantization_Report.ipynb): 상세 데이터 시각화(MSE, SNR, 온디바이스 Latency 비교) 및 분석 리포트.
-- `android_benchmark_results.csv`: 온디바이스 벤치마크 로우 데이터.
+- `results/android_benchmark_results.csv`: 온디바이스 벤치마크 로우 데이터.
